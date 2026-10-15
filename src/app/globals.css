@@ -17,6 +17,9 @@ input, select, textarea {
 input:focus, select:focus, textarea:focus { border-color: rgba(34,211,238,.6); box-shadow: 0 0 0 3px rgba(34,211,238,.08); }
 button.primary { border: 0; border-radius: .75rem; background: #22d3ee; color: #082f49; font-weight: 700; padding: .65rem 1rem; }
 button.primary:hover { filter: brightness(1.08); }
+button.danger { border: 1px solid #be123c; border-radius: .75rem; background: rgba(190,18,60,.18); color: #fda4af; font-weight: 700; padding: .55rem .8rem; white-space: nowrap; }
+button.danger:hover:not(:disabled) { background: rgba(190,18,60,.3); }
+button.danger:disabled { opacity: .55; cursor: not-allowed; }
 table { width: 100%; border-collapse: collapse; font-size: .875rem; }
 th { text-align: left; color: #94a3b8; font-weight: 500; padding: .7rem; border-bottom: 1px solid rgba(255,255,255,.08); }
 td { padding: .8rem .7rem; border-bottom: 1px solid rgba(255,255,255,.05); color: #cbd5e1; }
