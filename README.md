@@ -17,7 +17,10 @@ npm ci
 npm run dev
 ```
 
-Acesse `http://localhost:3000`. A interface consulta `GET /backend/api/health`, encaminhado pelo Next.js para `API_ORIGIN`.
+Acesse `http://localhost:3000`. A interface consulta `GET /backend/api/health`,
+encaminhado pelo Next.js para `API_ORIGIN`. Em Docker, `API_ORIGIN` aponta para
+o serviço interno `financial-agent-api:3000`; no desenvolvimento local, aponta
+para `http://localhost:3001`.
 
 Para executar o ambiente completo sem PostgreSQL instalado localmente, a partir da pasta `Projetos`:
 
