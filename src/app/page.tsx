@@ -1,34 +1,66 @@
-'use client';
-
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { FormEvent, useMemo, useState } from 'react';
-import { api, ApiRecord } from '../lib/api';
-import { Badge, Card, DateValue, EmptyState, ErrorState, LoadingState, Money, PageHeader, Unavailable } from '../components/ui';
+import { ConnectionStatus } from '@/components/connection-status';
 
-const links = [['/', 'Dashboard'], ['/transactions', 'Transações'], ['/imports', 'Importações'], ['/review', 'Revisão'], ['/analytics', 'Análises'], ['/recurring', 'Recorrências'], ['/installments', 'Parcelamentos'], ['/categories', 'Categorias'], ['/merchants', 'Estabelecimentos'], ['/profiles', 'Perfis'], ['/rules', 'Regras'], ['/accounts', 'Contas'], ['/classification', 'Classificação'], ['/settings', 'Configurações']] as const;
-const unavailable: Record<string, [string, string]> = { review: ['Central de revisão', 'GET /review'], recurring: ['Recorrências', 'GET /recurring'], installments: ['Parcelamentos', 'GET /installments'], classification: ['Central de classificação', 'GET /classification'], settings: ['Configurações', 'GET /settings'] };
-const title = (v: unknown) => String(v ?? '—').replaceAll('_', ' ');
-const useRecords = (path: string) => useQuery({ queryKey: [path], queryFn: () => api<ApiRecord[]>(path) });
+export default function Home() {
+  return (
+    <main className="site-shell">
+      <nav className="topbar" aria-label="Navegação principal">
+        <Link className="brand" href="/" aria-label="Financial Agent">
+          <span className="brand-mark">F</span>
+          <span>Financial Agent</span>
+        </Link>
+        <span className="environment-label">Ambiente inicial</span>
+      </nav>
 
-function Frame({ children }: { children: React.ReactNode }) { const path = usePathname(); return <main className="app-shell"><aside className="sidebar"><Link className="brand" href="/"><span>FC</span><strong>Financial Core<small>Personal finance</small></strong></Link><nav>{links.map(([href, label]) => <Link key={href} className={path === href ? 'nav-link active' : 'nav-link'} href={href}>{label}{unavailable[href.slice(1)] && <i>API</i>}</Link>)}</nav></aside><div className="content"><nav className="mobile-nav">{links.slice(0, 6).map(([href, label]) => <Link key={href} href={href}>{label}</Link>)}</nav>{children}</div></main>; }
-function Table({ headers, children, empty }: { headers: string[]; children: React.ReactNode; empty?: boolean }) { return <div className="table-wrap"><table><thead><tr>{headers.map((head) => <th key={head}>{head}</th>)}</tr></thead><tbody>{empty ? <tr><td colSpan={headers.length}><EmptyState title="Nenhum registro encontrado." /></td></tr> : children}</tbody></table></div>; }
-function Metric({ label, cents, text, tone }: { label: string; cents?: unknown; text?: string; tone?: string }) { return <Card className="metric"><span>{label}</span><strong className={tone}>{text ?? <Money cents={cents} />}</strong></Card>; }
+      <section className="hero">
+        <div className="hero-copy">
+          <p className="eyebrow">Clareza para suas decisões</p>
+          <h1>Seu dinheiro, com mais contexto e menos ruído.</h1>
+          <p className="hero-description">
+            Uma base segura e objetiva para acompanhar sua vida financeira. O
+            Financial Agent está sendo preparado para evoluir com você.
+          </p>
+          <ConnectionStatus />
+        </div>
 
-function Dashboard() { const [month, setMonth] = useState(''); const dash = useQuery({ queryKey: ['dashboard', month], queryFn: () => api<ApiRecord>(`/analytics/dashboard${month ? `?month=${month}` : ''}`) }); const monthly = useQuery({ queryKey: ['monthly'], queryFn: () => api<ApiRecord[]>('/analytics/monthly') }); const cats = useQuery({ queryKey: ['analytics-categories'], queryFn: () => api<ApiRecord>('/analytics/categories') }); if (dash.isLoading) return <LoadingState />; if (dash.error) return <ErrorState error={dash.error} />; const data = dash.data ?? {}; const sum = (data.summary ?? {}) as ApiRecord; const expense = (data.expenses ?? {}) as ApiRecord; const categoryData = Array.isArray(cats.data?.data) ? cats.data.data as ApiRecord[] : []; return <><PageHeader title="Como está sua situação financeira?"><label className="filter-label">Mês<input type="month" value={month} onChange={(e) => setMonth(e.target.value)} /></label></PageHeader><div className="metrics"><Metric label="Receitas" cents={sum.income} tone="positive" /><Metric label="Despesas" cents={sum.expenses} tone="negative" /><Metric label="Saldo" cents={sum.balance} /><Metric label="Taxa de economia" text={`${Number(sum.savingsRate ?? 0).toFixed(1)}%`} /><Metric label="Essenciais" cents={expense.essential} /><Metric label="Não essenciais" cents={expense.nonEssential} /></div><div className="chart-grid"><Card className="chart-card"><h2>Evolução</h2><ResponsiveContainer width="100%" height={250}><LineChart data={monthly.data ?? []}><CartesianGrid stroke="#23304a" /><XAxis dataKey="month" /><YAxis /><Tooltip formatter={(v) => <Money cents={v} />} /><Line dataKey="income" stroke="#5eead4" /><Line dataKey="expense" stroke="#fb7185" /><Line dataKey="balance" stroke="#93c5fd" /></LineChart></ResponsiveContainer></Card><Card className="chart-card"><h2>Gastos por categoria</h2>{categoryData.length ? <ResponsiveContainer width="100%" height={250}><BarChart data={categoryData}><CartesianGrid stroke="#23304a" /><XAxis dataKey="category" hide /><YAxis /><Tooltip formatter={(v) => <Money cents={v} />} /><Bar dataKey="amount" fill="#818cf8" /></BarChart></ResponsiveContainer> : <EmptyState title="Sem dados no período" />}</Card></div><Card><h2>Insights</h2><EmptyState title="Nenhum insight retornado"><>Os insights devem ser disponibilizados pelo backend.</></EmptyState></Card></>; }
+        <div className="hero-visual" aria-hidden="true">
+          <div className="visual-orbit orbit-large" />
+          <div className="visual-orbit orbit-small" />
+          <div className="visual-core">
+            <span>FA</span>
+            <small>foundation</small>
+          </div>
+        </div>
+      </section>
 
-function Transactions() { const data = useRecords('/transactions'); const [search, setSearch] = useState(''); const filtered = useMemo(() => (data.data ?? []).filter((x) => `${x.description} ${x.displayName}`.toLowerCase().includes(search.toLowerCase())), [data.data, search]); return <><PageHeader title="Transações"><label className="filter-label">Buscar<input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Descrição" /></label></PageHeader>{data.isLoading ? <LoadingState /> : data.error ? <ErrorState error={data.error} /> : <Card><Table headers={['Descrição', 'Data', 'Tipo', 'Valor', 'Parcelas']} empty={!filtered.length}>{filtered.map((x) => <tr key={String(x.id)}><td><strong>{String(x.displayName ?? x.description)}</strong><small>{String(x.description)}</small></td><td><DateValue value={((x.entries as ApiRecord[] | undefined)?.[0])?.transactionDate} /></td><td><Badge tone={x.type === 'INCOME' ? 'green' : 'red'}>{title(x.type)}</Badge></td><td><Money cents={x.totalAmountCents} /></td><td>{x.installmentTotal ? `${String(x.installmentTotal)}x` : '—'}</td></tr>)}</Table><p className="contract-note">Filtros avançados, detalhe com classificação e edição dependem de campos/rotas ainda não expostos pela API.</p></Card>}</>; }
+      <section className="principles" aria-labelledby="principles-title">
+        <div className="section-heading">
+          <p className="eyebrow">Princípios da plataforma</p>
+          <h2 id="principles-title">Construído para ser confiável desde o início.</h2>
+        </div>
+        <div className="principle-grid">
+          <article>
+            <span className="principle-number">01</span>
+            <h3>Dados sob controle</h3>
+            <p>As regras e os cálculos pertencem ao backend, com uma interface clara para você.</p>
+          </article>
+          <article>
+            <span className="principle-number">02</span>
+            <h3>Decisões determinísticas</h3>
+            <p>Resultados consistentes, explicáveis e sem saldos ou informações inventadas.</p>
+          </article>
+          <article>
+            <span className="principle-number">03</span>
+            <h3>Evolução incremental</h3>
+            <p>Cada nova capacidade será adicionada com escopo pequeno, testável e seguro.</p>
+          </article>
+        </div>
+      </section>
 
-function Imports() { const accounts = useRecords('/accounts'); const imports = useRecords('/imports'); const qc = useQueryClient(); const [file, setFile] = useState<File | null>(null); const [accountId, setAccountId] = useState(''); const upload = useMutation({ mutationFn: async () => { const body = new FormData(); body.set('accountId', accountId); body.set('filename', file!.name); body.set('file', file!); const response = await fetch('/backend/imports', { method: 'POST', body }); if (!response.ok) throw new Error(await response.text()); return response.json() as Promise<ApiRecord>; }, onSuccess: () => { qc.invalidateQueries({ queryKey: ['/imports'] }); qc.invalidateQueries({ queryKey: ['/transactions'] }); setFile(null); setAccountId(''); } }); const submit = (e: FormEvent) => { e.preventDefault(); if (file && accountId) upload.mutate(); }; return <><PageHeader title="Importações" /><Card><h2>Importar extrato</h2><p className="muted">CSV e PDF da Caixa são processados pelo backend; PDFs usam OCR para leitura.</p><form className="import-form" onSubmit={submit}><select value={accountId} onChange={(e) => setAccountId(e.target.value)} required aria-label="Conta"><option value="">Selecione a conta</option>{(accounts.data ?? []).map((a) => <option key={String(a.id)} value={String(a.id)}>{String(a.name)}</option>)}</select><input required type="file" accept=".csv,text/csv,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /><button className="primary" disabled={!file || !accountId || upload.isPending}>{upload.isPending ? 'Importando…' : 'Importar arquivo'}</button></form>{upload.error && <ErrorState error={upload.error} />}</Card><Card><h2>Histórico e diagnóstico</h2>{imports.isLoading ? <LoadingState /> : imports.error ? <ErrorState error={imports.error} /> : <Table headers={['Arquivo', 'Status', 'Total', 'Importadas', 'Duplicadas', 'Inválidas', 'Data']} empty={!(imports.data ?? []).length}>{(imports.data ?? []).map((x) => <tr key={String(x.id)}><td>{String(x.filename)}</td><td><Badge tone={String(x.status).includes('ERROR') ? 'amber' : 'green'}>{String(x.status)}</Badge></td><td>{String(x.totalRows)}</td><td>{String(x.importedRows)}</td><td>{String(x.duplicateRows)}</td><td>{String(x.invalidRows)}</td><td><DateValue value={x.createdAt} /></td></tr>)}</Table>}</Card></>; }
-
-function Analytics() { const monthly = useQuery({ queryKey: ['monthly'], queryFn: () => api<ApiRecord[]>('/analytics/monthly') }); const comparison = useQuery({ queryKey: ['comparison'], queryFn: () => api<ApiRecord>('/analytics/comparison') }); if (monthly.isLoading || comparison.isLoading) return <LoadingState />; if (monthly.error || comparison.error) return <ErrorState error={monthly.error ?? comparison.error} />; const c = comparison.data ?? {}; return <><PageHeader title="Análises" eyebrow="Cálculos do Financial Core" /><div className="metrics"><Metric label="Anterior" cents={c.previous} /><Metric label="Atual" cents={c.current} /><Metric label="Diferença" cents={c.difference} /><Metric label="Variação" text={`${Number(c.percentage ?? 0).toFixed(1)}%`} /></div><Card className="chart-card"><h2>Evolução mensal</h2><ResponsiveContainer width="100%" height={300}><LineChart data={monthly.data ?? []}><CartesianGrid stroke="#23304a" /><XAxis dataKey="month" /><YAxis /><Tooltip formatter={(v) => <Money cents={v} />} /><Line dataKey="balance" stroke="#5eead4" /></LineChart></ResponsiveContainer></Card><Unavailable title="Estabelecimentos, perfis, recorrências e parcelamentos" endpoint="GET /analytics/merchants, /profiles, /recurring, /installments" /></>; }
-
-type Kind = 'accounts' | 'categories' | 'merchants' | 'profiles' | 'rules';
-const config: Record<Kind, { title: string; path: string; fields: string[]; headers: string[] }> = { accounts: { title: 'Contas', path: '/accounts', fields: ['name', 'institutionName', 'type', 'currency'], headers: ['Nome', 'Instituição', 'Tipo', 'Moeda', 'Status'] }, categories: { title: 'Categorias', path: '/categories', fields: ['name', 'description', 'parentId', 'color'], headers: ['Nome', 'Descrição', 'Hierarquia', 'Status'] }, merchants: { title: 'Estabelecimentos', path: '/merchants', fields: ['name', 'normalizedName', 'notes'], headers: ['Nome', 'Nome normalizado', 'Status'] }, profiles: { title: 'Perfis', path: '/profiles', fields: ['name', 'description'], headers: ['Nome', 'Descrição', 'Status'] }, rules: { title: 'Regras', path: '/rules', fields: ['name', 'pattern', 'matchType', 'priority'], headers: ['Nome', 'Padrão', 'Match', 'Prioridade', 'Status'] } };
-function Crud({ kind }: { kind: Kind }) { const c = config[kind]; const data = useRecords(c.path); const qc = useQueryClient(); const [editing, setEditing] = useState<ApiRecord | null>(null); const [open, setOpen] = useState(false); const save = useMutation({ mutationFn: ({ id, values }: { id?: string; values: ApiRecord }) => api(id ? `${c.path}/${id}` : c.path, { method: id ? 'PATCH' : 'POST', body: JSON.stringify(values) }), onSuccess: () => { qc.invalidateQueries({ queryKey: [c.path] }); setOpen(false); } }); return <><PageHeader title={c.title}><button className="primary" onClick={() => { setEditing(null); setOpen(true); }}>Novo</button></PageHeader>{data.isLoading ? <LoadingState /> : data.error ? <ErrorState error={data.error} /> : <Card><Table headers={[...c.headers, '']} empty={!(data.data ?? []).length}>{(data.data ?? []).map((x) => <tr key={String(x.id)}><td>{String(x.name)}</td>{kind === 'accounts' ? <><td>{String(x.institutionName ?? '—')}</td><td>{title(x.type)}</td><td>{String(x.currency)}</td></> : kind === 'categories' ? <><td>{String(x.description ?? '—')}</td><td>{x.parentId ? 'Subcategoria' : 'Categoria'}</td></> : kind === 'merchants' ? <td>{String(x.normalizedName ?? '—')}</td> : kind === 'profiles' ? <td>{String(x.description ?? '—')}</td> : <><td>{String(x.pattern)}</td><td>{title(x.matchType)}</td><td>{String(x.priority ?? 0)}</td></>}<td><Badge tone={x.active === false ? 'slate' : 'green'}>{x.active === false ? 'Inativo' : 'Ativo'}</Badge></td><td><button className="link-button" onClick={() => { setEditing(x); setOpen(true); }}>Editar</button></td></tr>)}</Table></Card>}{open && <CrudDialog c={c} initial={editing} saving={save.isPending} error={save.error} close={() => setOpen(false)} submit={(values) => save.mutate({ id: typeof editing?.id === 'string' ? editing.id : undefined, values })} />}</>; }
-function CrudDialog({ c, initial, saving, error, close, submit }: { c: { title: string; fields: string[] }; initial: ApiRecord | null; saving: boolean; error: unknown; close: () => void; submit: (v: ApiRecord) => void }) { const form = useForm<ApiRecord>({ defaultValues: Object.fromEntries(c.fields.map((f) => [f, initial?.[f] ?? (f === 'type' ? 'CHECKING' : f === 'matchType' ? 'CONTAINS' : f === 'currency' ? 'BRL' : f === 'priority' ? 0 : '')])) }); return <div className="dialog-backdrop" onMouseDown={close}><section className="dialog" role="dialog" aria-modal="true" aria-label={c.title} onMouseDown={(e) => e.stopPropagation()}><header><h2>{initial ? 'Editar' : 'Criar'} {c.title}</h2><button onClick={close} aria-label="Fechar">×</button></header><form className="form-grid" onSubmit={form.handleSubmit((v) => submit(Object.fromEntries(Object.entries(v).filter(([, value]) => value !== ''))))}>{c.fields.map((f) => <label className="field" key={f}><span>{title(f)}</span>{f === 'type' ? <select {...form.register(f)}><option>CHECKING</option><option>SAVINGS</option><option>CREDIT_CARD</option><option>CASH</option><option>INVESTMENT</option><option>OTHER</option></select> : f === 'matchType' ? <select {...form.register(f)}><option>EXACT</option><option>CONTAINS</option><option>STARTS_WITH</option><option>ENDS_WITH</option></select> : <input type={f === 'priority' ? 'number' : 'text'} {...form.register(f)} />}</label>)}<label className="check"><input type="checkbox" defaultChecked={initial?.active !== false} {...form.register('active')} /> Ativo</label>{error ? <ErrorState error={error} /> : null}<div className="dialog-actions"><button type="button" onClick={close}>Cancelar</button><button className="primary" disabled={saving}>{saving ? 'Salvando…' : 'Salvar'}</button></div></form></section></div>; }
-
-export default function FinancialApp() { const section = usePathname().split('/')[1] || 'dashboard'; const view = section === 'dashboard' ? <Dashboard /> : section === 'transactions' ? <Transactions /> : section === 'imports' ? <Imports /> : section === 'analytics' ? <Analytics /> : section in config ? <Crud kind={section as Kind} /> : unavailable[section] ? <><PageHeader title={unavailable[section][0]} /><Unavailable title={unavailable[section][0]} endpoint={unavailable[section][1]} /></> : <Dashboard />; return <Frame>{view}</Frame>; }
+      <footer className="footer">
+        <span>Financial Agent</span>
+        <span>Fundação da interface · 2026</span>
+      </footer>
+    </main>
+  );
+}

@@ -1,16 +1,19 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'Financial Core',
-  description: 'Interface do Financial Core para gestão financeira pessoal',
+  title: 'Financial Agent',
+  description: 'Fundação da interface do Financial Agent.',
 };
 
-export default function RootLayout({ children }: LayoutProps<'/'>) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="pt-BR">
-      <body><Providers>{children}</Providers></body>
+      <body>{children}</body>
     </html>
   );
 }
